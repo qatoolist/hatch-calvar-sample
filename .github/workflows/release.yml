@@ -8,9 +8,6 @@ on:
     workflows: ["Auto-create Release Tag"]
     types:
       - completed
-    branches:
-      - main
-      - master
 
 jobs:
   release:
