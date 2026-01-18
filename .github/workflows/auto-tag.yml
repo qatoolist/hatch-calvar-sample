@@ -21,7 +21,7 @@ jobs:
         with:
           fetch-depth: 0  # Need full history for git tags
           # Use PAT if available, otherwise GITHUB_TOKEN (note: GITHUB_TOKEN won't trigger workflows)
-          token: ${{ secrets.GITHUB_PAT || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
       
       - name: Configure Git
         run: |
@@ -71,7 +71,7 @@ jobs:
           # Create annotated tag
           git tag -a "$TAG_NAME" -m "Release $VERSION (auto-created from PR #${{ github.event.pull_request.number }})"
           
-          # Push tag - if using GITHUB_PAT, this will trigger release workflow
+          # Push tag - if using GH_PAT, this will trigger release workflow
           # If using GITHUB_TOKEN, workflows won't trigger (GitHub security feature)
           git push origin "$TAG_NAME"
           
