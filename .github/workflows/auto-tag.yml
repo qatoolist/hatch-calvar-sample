@@ -17,26 +17,23 @@ jobs:
       pull-requests: read
 
     steps:
+      # Configure credentials BEFORE checkout
+      - name: Configure git credentials
+        run: |
+          git config --global credential.helper store
+          git config --global url."https://x-access-token:${{ secrets.GH_PAT || github.token }}@github.com/".insteadOf "https://github.com/"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: true
-          # IMPORTANT: use PAT if provided, else fall back to GITHUB_TOKEN
-          token: ${{ secrets.GH_PAT != '' && secrets.GH_PAT || github.token }}
+          token: ${{ secrets.GH_PAT || github.token }}
 
-      - name: Configure Git
+      - name: Configure Git identity
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      # Make HTTPS auth bulletproof even if something rewrites origin to https://github.com/...
-      - name: Ensure git uses token for https://github.com
-        env:
-          TOKEN: ${{ secrets.GH_PAT != '' && secrets.GH_PAT || github.token }}
-        run: |
-          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
-          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "http://github.com/"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -73,6 +70,8 @@ jobs:
 
       - name: Create and push tag
         if: steps.tag_check.outputs.exists == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT || github.token }}
         run: |
           TAG_NAME="v${{ steps.version.outputs.version }}"
           VERSION="${{ steps.version.outputs.version }}"
