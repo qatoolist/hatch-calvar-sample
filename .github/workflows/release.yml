@@ -1,0 +1,58 @@
+name: Release to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # For Trusted Publishing
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          # Validate CalVer format: YYYY.MM.DD.MICRO
+          if ! [[ "$VERSION" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+$ ]]; then
+            echo "Error: Invalid CalVer format: $VERSION"
+            echo "Expected format: YYYY.MM.DD.MICRO (e.g., 2024.01.18.1)"
+            exit 1
+          fi
+          echo "Validated version: $VERSION"
+      
+      - name: Set version in VERSION file
+        run: |
+          echo "${{ steps.version.outputs.version }}" > src/hatch_calvar_sample/VERSION
+          cat src/hatch_calvar_sample/VERSION
+      
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install hatchling build twine
+      
+      - name: Build package
+        run: hatch build
+      
+      - name: Check package
+        run: twine check dist/*
+      
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
