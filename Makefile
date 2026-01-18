@@ -1,4 +1,4 @@
-.PHONY: help version-calc version-check version-validate release-tag build-test test clean install
+.PHONY: help version-calc version-check version-validate release-tag build-test test clean install version-dev
 
 # Default Python interpreter
 PYTHON := python3
@@ -15,13 +15,22 @@ VERSION_FILE := $(SRC_DIR)/VERSION
 help:
 	@echo "Available targets:"
 	@echo "  version-calc     - Calculate next CalVer version"
+	@echo "  version-dev      - Generate CalVer dev version for local development"
 	@echo "  version-check    - Check current version from different sources"
 	@echo "  version-validate - Validate version format (use VERSION=2024.01.18.1)"
 	@echo "  release-tag      - Create and push release tag manually (normally auto-created on PR merge)"
 	@echo "  build-test       - Build package for testing"
 	@echo "  test             - Run tests"
-	@echo "  install          - Install package in development mode"
+	@echo "  install          - Install package in development mode (auto-generates dev version)"
 	@echo "  clean            - Clean build artifacts and VERSION file"
+
+version-dev:
+	@echo "Generating CalVer dev version for local development..."
+	@VERSION=$$($(PYTHON) $(SCRIPTS_DIR)/calc_version.py --validate --pep440); \
+	DEV_VERSION="$${VERSION}.dev$$(date +%s)"; \
+	echo "__version__ = \"$$DEV_VERSION\"" > $(VERSION_FILE); \
+	echo "Generated dev version: $$DEV_VERSION"; \
+	cat $(VERSION_FILE)
 
 version-calc:
 	@echo "Calculating next CalVer version..."
@@ -63,7 +72,7 @@ release-tag:
 build-test:
 	@echo "Building package for testing..."
 	@VERSION=$$($(PYTHON) $(SCRIPTS_DIR)/calc_version.py); \
-	echo "$$VERSION" > $(VERSION_FILE); \
+	echo "__version__ = \"$$VERSION\"" > $(VERSION_FILE); \
 	echo "Version file created: $(VERSION_FILE) = $$VERSION"; \
 	hatch build; \
 	echo "Package built in dist/"; \
@@ -79,6 +88,6 @@ clean:
 	@rm -f $(VERSION_FILE)
 	@echo "Cleaned build artifacts and VERSION file"
 
-install:
+install: version-dev
 	@echo "Installing package in development mode..."
 	@pip install -e .
