@@ -22,7 +22,6 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: true
-          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Configure Git identity
         run: |
