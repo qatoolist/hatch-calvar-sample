@@ -17,6 +17,16 @@ jobs:
       pull-requests: read
 
     steps:
+      - name: Debug token availability
+        run: |
+          if [ -n "${{ secrets.GH_PAT }}" ]; then
+            echo "GH_PAT is set (length: ${#GH_PAT_VAL})"
+          else
+            echo "GH_PAT is NOT set - using github.token"
+          fi
+        env:
+          GH_PAT_VAL: ${{ secrets.GH_PAT }}
+
       # Configure credentials BEFORE checkout
       - name: Configure git credentials
         run: |
