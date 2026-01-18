@@ -57,7 +57,7 @@ jobs:
       
       - name: Set version in VERSION file
         run: |
-          echo "${{ steps.version.outputs.version }}" > src/hatch_calvar_sample/VERSION
+          echo "__version__ = \"${{ steps.version.outputs.version }}\"" > src/hatch_calvar_sample/VERSION
           cat src/hatch_calvar_sample/VERSION
       
       - name: Install build tools
