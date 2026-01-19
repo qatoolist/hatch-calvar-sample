@@ -33,19 +33,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
+      - name: Generate dev version if needed
+        run: |
+          if [ ! -f src/hatch_calvar_sample/VERSION ]; then
+            python -m pip install --upgrade pip
+            VERSION=$(python scripts/calc_version.py --validate --pep440)
+            DEV_VERSION="${VERSION}.dev$(date +%s)"
+            echo "__version__ = \"${DEV_VERSION}\"" > src/hatch_calvar_sample/VERSION
+            echo "Generated VERSION file: ${DEV_VERSION}"
+          else
+            echo "VERSION file already exists"
+          fi
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e .
           pip install pytest pytest-cov
-
-      - name: Generate dev version if needed
-        run: |
-          if [ ! -f src/hatch_calvar_sample/VERSION ]; then
-            VERSION=$(python scripts/calc_version.py --validate --pep440)
-            DEV_VERSION="${VERSION}.dev$(date +%s)"
-            echo "__version__ = \"${DEV_VERSION}\"" > src/hatch_calvar_sample/VERSION
-          fi
 
       - name: Run tests with coverage
         run: |
