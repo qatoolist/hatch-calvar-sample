@@ -282,10 +282,10 @@ pytest --cov=hatch_calvar_sample --cov=scripts
    ```bash
    # Create VERSION file manually
    echo "2024.01.18.1" > src/hatch_calvar_sample/VERSION
-   
+
    # Build package
    hatch build
-   
+
    # Check built package
    twine check dist/*
    ```
