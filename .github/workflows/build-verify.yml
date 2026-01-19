@@ -42,12 +42,14 @@ jobs:
           pip install hatch hatchling build twine
 
       - name: Build package
+        shell: bash
         run: |
           hatch build
           echo "Built packages:"
           ls -la dist/
 
       - name: Verify package with twine
+        shell: bash
         run: |
           twine check dist/*
 
