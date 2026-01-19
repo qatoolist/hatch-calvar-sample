@@ -53,6 +53,7 @@ jobs:
           pip install pytest pytest-cov
 
       - name: Run tests with coverage
+        shell: bash
         run: |
           pytest tests/ \
             --cov=src/hatch_calvar_sample \
@@ -83,5 +84,6 @@ jobs:
 
       - name: Check coverage threshold
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        shell: bash
         run: |
           coverage report --fail-under=70 || echo "Coverage below 70% - warning only"
