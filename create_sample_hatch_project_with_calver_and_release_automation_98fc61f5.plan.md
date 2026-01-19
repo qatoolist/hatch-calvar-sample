@@ -457,17 +457,17 @@ def main():
     parser.add_argument("--validate", action="store_true", help="Validate version format")
     parser.add_argument("--pep440", action="store_true", help="Check PEP 440 compliance")
     args = parser.parse_args()
-    
+
     version = calculate_next_version()
-    
+
     if args.validate:
         if not validate_version_format(version):
             sys.exit(1)
-    
+
     if args.pep440:
         if not check_pep440_compliance(version):
             sys.exit(1)
-    
+
     print(version)
     return 0
 
@@ -489,15 +489,15 @@ from typing import Optional
 def version_calc(args):
     """Calculate next version."""
     # Implementation
-    
+
 def version_check(args):
     """Check current version."""
     # Implementation
-    
+
 def version_validate(args):
     """Validate version format."""
     # Implementation
-    
+
 def version_compare(args):
     """Compare two versions."""
     # Implementation
@@ -506,23 +506,23 @@ def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(description="CalVer version management CLI")
     subparsers = parser.add_subparsers(dest="command", help="Command")
-    
+
     # calc command
     calc_parser = subparsers.add_parser("calc", help="Calculate next version")
-    
+
     # check command
     check_parser = subparsers.add_parser("check", help="Check current version")
-    
+
     # ... other commands
-    
+
     args = parser.parse_args()
-    
+
     if args.command == "calc":
         version_calc(args)
     elif args.command == "check":
         version_check(args)
     # ... handle other commands
-    
+
     return 0
 ```
 
@@ -570,17 +570,17 @@ jobs:
     permissions:
       contents: read
       id-token: write  # For Trusted Publishing
-    
+
     steps:
          - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
          - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
          - name: Extract version from tag
         id: version
         run: |
@@ -591,20 +591,20 @@ jobs:
             echo "Invalid CalVer format: $VERSION"
             exit 1
           fi
-      
+
          - name: Set version
         run: |
           echo "${{ steps.version.outputs.version }}" > src/hatch_calver_sample/VERSION
-      
+
          - name: Install build tools
         run: pip install hatchling build twine
-      
+
          - name: Build package
         run: hatch build
-      
+
          - name: Check package
         run: twine check dist/*
-      
+
          - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:

@@ -3,11 +3,20 @@
 # SPDX-License-Identifier: MIT
 """Version metadata for hatch_calvar_sample package."""
 
+# Import version function with fallback for Python < 3.8
 try:
-    from importlib.metadata import version as get_package_version
+    from importlib.metadata import version as _version_func
 except ImportError:
     # Python < 3.8
-    from importlib_metadata import version as get_package_version
+    from importlib_metadata import (
+        version as _version_func,  # type: ignore[no-untyped-call]
+    )
+
+
+def get_package_version(package_name: str) -> str:
+    """Get version from package metadata."""
+    return _version_func(package_name)
+
 
 # Try to get version from package metadata (when installed)
 try:
@@ -16,7 +25,7 @@ except Exception:
     # Fallback: try reading from VERSION file (for development builds)
     import os
     from pathlib import Path
-    
+
     version_file = Path(__file__).parent / "VERSION"
     if version_file.exists():
         __version__ = version_file.read_text().strip()
