@@ -95,7 +95,7 @@ jobs:
           radon mi src/ -j > maintainability-report.json || true
 
       - name: Upload complexity reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: complexity-reports
           path: |
