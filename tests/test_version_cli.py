@@ -61,10 +61,14 @@ class TestVersionCheck:
 
     @patch("hatch_calvar_sample.cli.get_package_version_from_metadata")
     @patch("hatch_calvar_sample.cli.get_git_tags")
-    def test_version_check_no_versions(self, mock_tags, mock_pkg_version):
+    @patch.object(Path, "exists", return_value=False)
+    def test_version_check_no_versions(
+        self, mock_path_exists, mock_tags, mock_pkg_version
+    ):
         """Test version check with no versions available."""
         mock_pkg_version.return_value = None
         mock_tags.return_value = []
+        # Mock VERSION file to not exist
 
         args = MagicMock()
         args.json = False
