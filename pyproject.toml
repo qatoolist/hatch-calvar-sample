@@ -33,9 +33,17 @@ dev = [
     "isort>=5.13.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
-    "bandit>=1.7.0",
+    "bandit[sarif]>=1.7.0",
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    # Enterprise tools
+    "radon>=6.0.0",
+    "xenon>=0.9.0",
+    "pip-licenses>=4.0.0",
+    "interrogate>=1.5.0",
+    "pydocstyle>=6.3.0",
+    "safety>=2.3.0",
+    "pip-audit>=2.6.0",
 ]
 lint = [
     "pre-commit>=3.0.0",
@@ -48,6 +56,19 @@ lint = [
 test = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+]
+security = [
+    "safety>=2.3.0",
+    "pip-audit>=2.6.0",
+    "bandit[sarif]>=1.7.0",
+]
+docs = [
+    "interrogate>=1.5.0",
+    "pydocstyle>=6.3.0",
+]
+quality = [
+    "radon>=6.0.0",
+    "xenon>=0.9.0",
 ]
 
 [project.scripts]
@@ -155,3 +176,36 @@ exclude_lines = [
   "if __name__ == .__main__.:",
   "if TYPE_CHECKING:",
 ]
+
+# Interrogate - docstring coverage
+[tool.interrogate]
+ignore-init-method = true
+ignore-init-module = true
+ignore-magic = true
+ignore-semiprivate = true
+ignore-private = true
+ignore-property-decorators = true
+ignore-module = true
+ignore-nested-functions = true
+ignore-nested-classes = true
+fail-under = 50
+exclude = ["tests", "scripts", "setup.py"]
+verbose = 1
+
+# Pydocstyle - docstring style
+[tool.pydocstyle]
+convention = "numpy"
+add-ignore = ["D100", "D104", "D105", "D107"]
+match = "(?!test_).*\\.py"
+match-dir = "^(?!tests|scripts).*"
+
+# Radon - code complexity
+[tool.radon]
+exclude = "tests/*,scripts/*"
+cc_min = "C"  # Report functions with complexity >= C
+
+# Xenon - complexity thresholds
+[tool.xenon]
+max-absolute = "C"
+max-modules = "B"
+max-average = "A"
