@@ -7,22 +7,25 @@ name = "hatch-calvar-sample"
 dynamic = ["version"]
 description = 'Sample project demonstrating CalVer (YYYY.MM.DD.MICRO) with hatch'
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = "MIT"
-keywords = []
+keywords = ["calver", "calendar-versioning", "hatch", "versioning", "python-packaging"]
 authors = [
   { name = "QAToolist", email = "qatoolist@gmail.com" },
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
+  "Topic :: Software Development :: Build Tools",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Environment :: Console",
 ]
 dependencies = []
 
@@ -109,7 +112,7 @@ install = "pre-commit install"
 
 [tool.black]
 line-length = 88
-target-version = ["py38", "py39", "py310", "py311", "py312"]
+target-version = ["py39", "py310", "py311", "py312"]
 
 [tool.isort]
 profile = "black"
@@ -117,12 +120,11 @@ line_length = 88
 
 [tool.ruff]
 line-length = 88
-target-version = "py38"
+target-version = "py39"
 select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
     "F",  # pyflakes
-    "I",  # isort
     "B",  # flake8-bugbear
     "C4", # flake8-comprehensions
     "UP", # pyupgrade
@@ -137,22 +139,28 @@ ignore = [
 "tests/*" = ["E501", "B011"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = false
+disallow_untyped_defs = true
 ignore_missing_imports = true
 exclude = [
-    "tests/",
     "scripts/",
 ]
 
 [[tool.mypy.overrides]]
 module = [
     "hatch_calvar_sample.__about__",
-    "hatch_calvar_sample.cli",
 ]
 disable_error_code = ["no-redef"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
 
 [tool.bandit]
 exclude_dirs = ["tests", "*.egg-info", ".venv", "venv"]
@@ -171,6 +179,7 @@ hatch_calvar_sample = ["src/hatch_calvar_sample", "*/hatch-calvar-sample/src/hat
 tests = ["tests", "*/hatch-calvar-sample/tests"]
 
 [tool.coverage.report]
+fail_under = 80
 exclude_lines = [
   "no cov",
   "if __name__ == .__main__.:",

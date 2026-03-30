@@ -30,8 +30,8 @@ MANIFEST
 # Hatch build artifacts
 .hatch/
 
-# Version file (generated during build/release)
-src/hatch_calvar_sample/VERSION
+# Generated version file (hatch-vcs leftover)
+src/hatch_calvar_sample/_version.py
 
 # PyInstaller
 *.manifest
@@ -61,6 +61,7 @@ venv.bak/
 # IDEs
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *~

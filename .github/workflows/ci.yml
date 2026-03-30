@@ -1,0 +1,325 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Lint & Code Quality
+  # ---------------------------------------------------------------------------
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pre-commit
+        run: |
+          python -m pip install --upgrade pip
+          pip install pre-commit
+
+      - name: Run pre-commit
+        run: pre-commit run --all-files
+
+      - name: Install dependencies for type checking
+        run: |
+          pip install mypy types-setuptools
+          pip install -e .
+
+      - name: Run mypy type checking
+        run: |
+          mypy src/hatch_calvar_sample --ignore-missing-imports --no-error-summary || true
+          mypy src/hatch_calvar_sample --ignore-missing-imports
+
+      - name: Install complexity tools
+        run: pip install radon xenon
+
+      - name: Check cyclomatic complexity
+        shell: bash
+        run: |
+          echo "=== Cyclomatic Complexity Report ==="
+          radon cc src/ -a -s || true
+          echo ""
+          echo "=== Maintainability Index ==="
+          radon mi src/ -s || true
+
+      - name: Check complexity thresholds
+        shell: bash
+        run: |
+          xenon src/ --max-absolute C --max-modules B --max-average A || echo "::warning::Some modules exceed complexity thresholds"
+        continue-on-error: true
+
+      - name: Check CHANGELOG.md was updated (PRs only)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          echo "Checking if CHANGELOG.md was modified in this PR..."
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          if echo "$CHANGED_FILES" | grep -q "CHANGELOG.md"; then
+            echo "CHANGELOG.md has been updated"
+          else
+            echo "::warning::CHANGELOG.md was not updated in this PR"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Tests
+  # ---------------------------------------------------------------------------
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-cov
+
+      - name: Run tests with coverage
+        shell: bash
+        run: |
+          pytest tests/ \
+            --cov=src/hatch_calvar_sample \
+            --cov=scripts \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-report=term-missing \
+            --junit-xml=junit.xml \
+            -v
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67ab1571f56898c # v4
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: test-results-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: |
+            junit.xml
+            htmlcov/
+
+      - name: Check coverage threshold
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        shell: bash
+        run: |
+          coverage report --fail-under=70 || echo "Coverage below 70% - warning only"
+
+  # ---------------------------------------------------------------------------
+  # Security Scanning
+  # ---------------------------------------------------------------------------
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependency scanning tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install safety pip-audit
+
+      - name: Generate requirements file
+        run: pip freeze > requirements-freeze.txt
+
+      - name: Run Safety check
+        run: |
+          safety check --file requirements-freeze.txt || echo "Safety check completed with findings"
+
+      - name: Run pip-audit
+        run: |
+          pip-audit --desc --format json --output pip-audit-report.json || echo "pip-audit completed with findings"
+        continue-on-error: true
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc8dddf3388de640b7849bb1c2a # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install code scanning tools
+        run: pip install bandit[sarif] ruff
+
+      - name: Run Bandit security scan
+        shell: bash
+        run: |
+          bandit -r src/ -f sarif -o bandit-results.sarif || true
+          bandit -r src/ -ll || echo "Bandit scan completed"
+        continue-on-error: true
+
+      - name: Upload Bandit SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@ff0a06e83cb2de871e5a09832bc6a81e7276941f # v3
+        with:
+          sarif_file: bandit-results.sarif
+          category: bandit
+        continue-on-error: true
+
+      - name: Run Ruff
+        shell: bash
+        run: |
+          ruff check --output-format=json --output-file=ruff-report.json . || true
+          ruff check . || echo "Ruff check completed"
+        continue-on-error: true
+
+      - name: Upload security scan artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: security-scan-results
+          path: |
+            pip-audit-report.json
+            bandit-results.sarif
+            ruff-report.json
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Build Verification
+  # ---------------------------------------------------------------------------
+  build-verify:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.9", "3.13"]
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install hatch hatchling build twine
+
+      - name: Build package
+        shell: bash
+        run: |
+          hatch build
+          echo "Built packages:"
+          ls -la dist/
+
+      - name: Verify package with twine
+        shell: bash
+        run: twine check dist/*
+
+      - name: Test wheel installation
+        shell: bash
+        run: |
+          python -m venv test-env
+
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            source test-env/Scripts/activate
+          else
+            source test-env/bin/activate
+          fi
+
+          pip install dist/*.whl
+
+          echo "Testing package import..."
+          python -c "import hatch_calvar_sample; print(f'Version: {hatch_calvar_sample.__version__}')"
+
+          echo "Testing CLI tool..."
+          calver-check --help
+          calver-check info || echo "Info command executed"
+
+          deactivate
+
+      - name: Test sdist installation
+        shell: bash
+        run: |
+          python -m venv test-env-sdist
+
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            source test-env-sdist/Scripts/activate
+          else
+            source test-env-sdist/bin/activate
+          fi
+
+          pip install dist/*.tar.gz
+
+          echo "Testing package import from sdist..."
+          python -c "import hatch_calvar_sample; print(f'Version: {hatch_calvar_sample.__version__}')"
+
+          deactivate
+
+      - name: Verify package metadata
+        shell: bash
+        run: |
+          echo "=== Package Metadata Verification ==="
+          pip install pkginfo
+          python -c "
+          from pkginfo import Wheel
+          import glob
+
+          wheel_files = glob.glob('dist/*.whl')
+          if wheel_files:
+              w = Wheel(wheel_files[0])
+              print(f'Name: {w.name}')
+              print(f'Version: {w.version}')
+              print(f'Summary: {w.summary}')
+              print(f'Author: {w.author}')
+              print(f'License: {w.license}')
+              print(f'Requires-Python: {w.requires_python}')
+              print(f'Classifiers: {w.classifiers[:3]}...')
+          "
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: build-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: dist/
+          retention-days: 7

@@ -1,4 +1,4 @@
-.PHONY: help version-calc version-check version-validate release-tag build-test test test-ci lint security check-all clean install version-dev type-check complexity license docs build-verify changelog check-enterprise
+.PHONY: help setup version-calc version-check version-validate release-tag build-test test test-ci lint security check-all clean install version-dev version-set version-alpha version-beta version-rc version-release type-check complexity license docs build-verify changelog check-enterprise
 
 # Default Python interpreter
 # Note: Python 3.13+ has known blake2b/blake2s hashing warnings (harmless)
@@ -28,9 +28,17 @@ help:
 	@echo "      Override with: make PYTHON=python3 <target>"
 	@echo "      Note: Use 'python3' not 'python3.14.2' - pyenv uses 'python3' command"
 	@echo ""
+	@echo "Setup:"
+	@echo "  setup            - Create venv, install dev dependencies, pre-commit hooks, and run tests"
+	@echo ""
 	@echo "Version Management:"
 	@echo "  version-calc     - Calculate next CalVer version"
-	@echo "  version-dev      - Generate CalVer dev version for local development"
+	@echo "  version-set      - Write next CalVer version to VERSION file"
+	@echo "  version-dev      - Write CalVer dev version (YYYY.MM.DD.MICRO.dev1) for local development"
+	@echo "  version-alpha    - Set alpha pre-release     (e.g., 2026.02.20.1 → 2026.02.20.1a0)"
+	@echo "  version-beta     - Set beta pre-release      (e.g., 2026.02.20.1a0 → 2026.02.20.1b0)"
+	@echo "  version-rc       - Set release candidate      (e.g., 2026.02.20.1b0 → 2026.02.20.1rc0)"
+	@echo "  version-release  - Strip pre-release suffix   (e.g., 2026.02.20.1rc0 → 2026.02.20.1)"
 	@echo "  version-check    - Check current version from different sources"
 	@echo "  version-validate - Validate version format (use VERSION=2024.01.18.1)"
 	@echo "  release-tag      - Create and push release tag manually (normally auto-created on PR merge)"
@@ -54,17 +62,47 @@ help:
 	@echo "  install          - Install package in development mode (auto-generates dev version)"
 	@echo "  clean            - Clean build artifacts and VERSION file"
 
+setup:
+	@echo "Setting up development environment..."
+	@if [ ! -d ".venv" ]; then \
+		echo "Creating Python virtual environment..."; \
+		$(PYTHON) -m venv .venv; \
+		echo "Virtual environment created at .venv"; \
+	else \
+		echo "Virtual environment already exists at .venv"; \
+	fi
+	@echo "Installing package in dev mode with all optional dependencies..."
+	@. .venv/bin/activate && pip install --upgrade pip >/dev/null 2>&1 && pip install -e ".[dev]"
+	@echo "Installing pre-commit hooks..."
+	@. .venv/bin/activate && pre-commit install
+	@echo "Running tests to verify setup..."
+	@. .venv/bin/activate && pytest tests/
+	@echo ""
+	@echo "Setup complete! Activate your environment with: source .venv/bin/activate"
+
+version-set:
+	@echo "Setting next CalVer version..."
+	@$(PYTHON) $(SCRIPTS_DIR)/calc_version.py --validate --pep440 --set
+
 version-dev:
-	@echo "Generating CalVer dev version for local development..."
-	@echo "Using Python: $$($(PYTHON) --version 2>/dev/null || echo 'python3')"
-	@VERSION=$$($(PYTHON) $(SCRIPTS_DIR)/calc_version.py --validate --pep440 2>/dev/null || echo "0.0.0"); \
-	if [ -z "$$VERSION" ] || [ "$$VERSION" = "" ]; then \
-		VERSION="0.0.0"; \
-	fi; \
-	DEV_VERSION="$${VERSION}.dev$$(date +%s)"; \
-	echo "__version__ = \"$$DEV_VERSION\"" > $(VERSION_FILE); \
-	echo "Generated dev version: $$DEV_VERSION"; \
-	cat $(VERSION_FILE)
+	@echo "Setting CalVer dev version for local development..."
+	@$(PYTHON) $(SCRIPTS_DIR)/calc_version.py --validate --pep440 --set-dev
+
+version-alpha:
+	@hatch version alpha
+	@echo "Current version: $$(hatch version)"
+
+version-beta:
+	@hatch version beta
+	@echo "Current version: $$(hatch version)"
+
+version-rc:
+	@hatch version rc
+	@echo "Current version: $$(hatch version)"
+
+version-release:
+	@hatch version release
+	@echo "Current version: $$(hatch version)"
 
 version-calc:
 	@echo "Calculating next CalVer version..."
