@@ -113,7 +113,6 @@ jobs:
         run: |
           pytest tests/ \
             --cov=src/hatch_calvar_sample \
-            --cov=scripts \
             --cov-report=xml \
             --cov-report=html \
             --cov-report=term-missing \
@@ -248,7 +247,7 @@ jobs:
       - name: Build package
         shell: bash
         run: |
-          hatch build
+          python -m build
           echo "Built packages:"
           ls -la dist/
 
