@@ -7,24 +7,26 @@ Sample hatch-based Python project demonstrating **Calendar Versioning (CalVer)**
 
 ## Overview
 
-This project serves as a proof-of-concept for implementing CalVer versioning with the hatch build system. It demonstrates:
+This project serves as a proof-of-concept and reusable template for implementing CalVer versioning with the hatch build system. It demonstrates:
 
 - **Calendar Versioning (YYYY.MM.DD.MICRO)** calculated from git tags
 - **Dynamic versioning** with hatch build system
 - **Version checking CLI tool** with multiple commands
 - **Automated PyPI release** via GitHub Actions
 - **Complete release workflow** automation
+- **Strict type checking** with mypy and `py.typed` marker
+- **Python 3.9 -- 3.13** support
 
 ### Version Format
 
 The project uses CalVer format: `YYYY.MM.DD.MICRO`
 
-- `YYYY` - 4-digit year (e.g., 2024)
-- `MM` - 2-digit month (01-12)
-- `DD` - 2-digit day (01-31)
-- `MICRO` - Sequential number for releases on the same day (1, 2, 3, ...)
+- `YYYY` -- 4-digit year (e.g., 2025)
+- `MM` -- 2-digit month (01-12)
+- `DD` -- 2-digit day (01-31)
+- `MICRO` -- Sequential number for releases on the same day (1, 2, 3, ...)
 
-Examples: `2024.01.18.1`, `2024.01.18.2`, `2024.03.15.1`
+Examples: `2025.01.18.1`, `2025.01.18.2`, `2025.03.15.1`
 
 ## Installation
 
@@ -32,20 +34,39 @@ Examples: `2024.01.18.1`, `2024.01.18.2`, `2024.03.15.1`
 pip install hatch-calvar-sample
 ```
 
-## Features
+## Release Workflow
 
-### Version Calculation
+The following diagram shows the fully automated release pipeline:
 
-The project includes a script that automatically calculates the next CalVer version based on:
-- Current UTC date
-- Existing git tags matching the CalVer pattern
-- Automatic MICRO increment for same-day releases
+```mermaid
+flowchart LR
+    A[PR Merged to main] --> B[auto-tag.yml]
+    B -->|Calculates CalVer\nCreates git tag| C[Tag pushed: vYYYY.MM.DD.MICRO]
+    C --> D[release.yml]
+    D -->|Builds & validates\npackage| E[Publish to PyPI]
 
-### CLI Tool
+    style A fill:#4a90d9,color:#fff
+    style B fill:#f5a623,color:#fff
+    style C fill:#7b68ee,color:#fff
+    style D fill:#f5a623,color:#fff
+    style E fill:#50c878,color:#fff
+```
 
-The `calver-check` CLI provides multiple commands for version management:
+**How it works:**
+
+1. You merge a pull request into `main`.
+2. `auto-tag.yml` runs, calculates the next CalVer version, and creates a `vYYYY.MM.DD.MICRO` git tag.
+3. The tag push triggers `release.yml`, which builds the package, validates it with twine, and publishes to PyPI via Trusted Publishing.
+4. CI checks (`ci.yml`) run on every push and PR to ensure tests, linting, security, and type checking pass.
+
+## CLI Tool
+
+The `calver-check` CLI provides commands for version management:
 
 ```bash
+# Show CLI version
+calver-check --version
+
 # Calculate next version
 calver-check calc
 
@@ -53,19 +74,26 @@ calver-check calc
 calver-check check
 
 # Validate version format
-calver-check validate 2024.01.18.1
+calver-check validate 2025.01.18.1
 
 # Compare two versions
-calver-check compare 2024.01.18.1 2024.01.18.2
+calver-check compare 2025.01.18.1 2025.01.18.2
 
 # Show version information
 calver-check info
+
+# Create a git tag for the next version
+calver-check tag
+
+# Preview the tag without creating it
+calver-check tag --dry-run
 ```
 
-All commands support `--json` flag for machine-readable output:
+All commands support `--json` for machine-readable output:
 
 ```bash
 calver-check calc --json
+calver-check tag --dry-run --json
 ```
 
 ## Usage Examples
@@ -73,118 +101,79 @@ calver-check calc --json
 ### Calculating Next Version
 
 ```bash
-# Using the script directly
-python scripts/calc_version.py
-
 # Using the CLI tool
 calver-check calc
+
+# Using the script directly
+python scripts/calc_version.py
 
 # With validation
 python scripts/calc_version.py --validate --pep440
 ```
 
-### Checking Current Version
+### Creating a Release Tag
 
 ```bash
-# Check version from package metadata
-calver-check check
+# Preview what tag would be created
+calver-check tag --dry-run
 
-# Check with JSON output
-calver-check check --json
+# Create the tag locally
+calver-check tag
+
+# Push the tag to trigger a release
+git push origin v2025.01.18.1
 ```
 
 ### Validating Version Format
 
 ```bash
-# Validate a version string
-calver-check validate 2024.01.18.1
+# Valid version
+calver-check validate 2025.01.18.1
 
-# Invalid version will exit with error
-calver-check validate 2024.1.18.1
+# Invalid version (exits with error)
+calver-check validate 2025.1.18.1
 ```
 
 ### Comparing Versions
 
 ```bash
-# Compare two versions
-calver-check compare 2024.01.18.1 2024.01.18.2
-# Output: 2024.01.18.1 < 2024.01.18.2
+calver-check compare 2025.01.18.1 2025.01.18.2
+# Output: 2025.01.18.1 < 2025.01.18.2
 ```
 
 ## Release Process
 
-### Fully Automated Release Workflow
+### Fully Automated (Recommended)
 
-The project uses GitHub Actions for **fully automated** PyPI releases. **No manual tagging required!** The workflow consists of two stages:
-
-#### Stage 1: Auto-tag on PR Merge
-
-When a pull request is merged to `main` or `master`:
-
-1. Automatically calculates next CalVer version using `scripts/calc_version.py`
-2. Creates a git tag with format `vYYYY.MM.DD.MICRO`
-3. Pushes the tag to the repository
-
-#### Stage 2: Build and Publish
-
-When a git tag matching `v*` is pushed:
-
-1. Extracts version from tag (strips `v` prefix)
-2. Validates CalVer format
-3. Builds package with hatch
-4. Validates distributions with twine
-5. Publishes to PyPI using Trusted Publishing
-
-### Automated Release Steps
-
-1. **Open a pull request** with your changes
-2. **Merge the pull request** to `main`/`master`
-3. **GitHub Actions automatically:**
-   - Calculates next CalVer version (e.g., `2024.01.18.1`)
-   - Creates tag `v2024.01.18.1`
-   - Builds the package
-   - Validates version format
+1. Open a pull request with your changes.
+2. Merge the pull request to `main`.
+3. GitHub Actions automatically:
+   - Calculates next CalVer version (e.g., `2025.01.18.1`)
+   - Creates tag `v2025.01.18.1`
+   - Builds and validates the package
    - Publishes to PyPI
 
-No manual tagging required! The release happens automatically when PRs are merged.
+No manual tagging required.
 
-### Manual Release (Optional)
+### Manual Release (Hotfixes)
 
-If you need to manually create a release tag (for hotfixes, etc.):
+```bash
+# Calculate and preview the next tag
+calver-check tag --dry-run
 
-1. **Calculate next version:**
-   ```bash
-   calver-check calc
-   # Output: 2024.01.18.1
-   ```
-
-2. **Create and push git tag:**
-   ```bash
-   git tag v2024.01.18.1 -m "Release 2024.01.18.1"
-   git push origin v2024.01.18.1
-   ```
-
-The tag push will trigger the same build and publish workflow.
+# Create and push the tag
+calver-check tag
+git push origin v2025.01.18.1
+```
 
 ### Using Makefile
 
-For convenience, use the Makefile targets:
-
 ```bash
-# Calculate next version
-make version-calc
-
-# Check current version
-make version-check
-
-# Validate version format
-make version-validate VERSION=2024.01.18.1
-
-# Create and push release tag
-make release-tag
-
-# Build package for testing
-make build-test
+make version-calc           # Calculate next version
+make version-check          # Check current version
+make version-validate VERSION=2025.01.18.1
+make release-tag            # Create and push release tag (interactive)
+make build-test             # Build package for testing
 ```
 
 ## Project Structure
@@ -194,23 +183,35 @@ hatch-calvar-sample/
 ├── pyproject.toml              # Hatch configuration with dynamic versioning
 ├── README.md                   # This file
 ├── CHANGELOG.md                # Changelog with CalVer format
+├── CONTRIBUTING.md             # Contribution guidelines
+├── SECURITY.md                 # Security policy
 ├── LICENSE.txt                 # MIT license
 ├── Makefile                    # Convenient make targets
+├── .pre-commit-config.yaml     # Pre-commit hook configuration
 ├── .github/
 │   └── workflows/
+│       ├── ci.yml              # Unified CI (test, lint, type-check, security)
 │       ├── auto-tag.yml        # Auto-create tag on PR merge
-│       └── release.yml         # Automated PyPI release workflow
+│       └── release.yml         # Build and publish to PyPI
+├── docs/
+│   ├── CALVER_MIGRATION_GUIDE.md   # Migrating an existing project to CalVer
+│   ├── CALVER_QUICK_START.md       # Quick-start guide for CalVer
+│   ├── PYPROJECT_TOML_MIGRATION.md # pyproject.toml migration reference
+│   └── PLANNING.md                 # Project planning notes
 ├── scripts/
-│   └── calc_version.py         # Version calculation script
+│   └── calc_version.py         # Standalone version calculation script
 ├── src/
 │   └── hatch_calvar_sample/
 │       ├── __init__.py         # Package with __version__
 │       ├── __about__.py        # Version metadata
-│       ├── VERSION             # Version file (generated during build)
-│       └── cli.py              # Version checking CLI implementation
+│       ├── calver.py           # Core CalVer logic (parse, validate, calculate)
+│       ├── cli.py              # CLI implementation (calver-check)
+│       ├── py.typed            # PEP 561 type marker
+│       └── VERSION             # Version file (generated during build)
 └── tests/
-    ├── test_version_calc.py    # Tests for version calculation
-    └── test_version_cli.py     # Tests for CLI tool
+    ├── test_version_calc.py    # Unit tests for version calculation
+    ├── test_version_cli.py     # Unit tests for CLI tool
+    └── test_integration.py     # Integration tests
 ```
 
 ## Configuration
@@ -239,103 +240,98 @@ Access version programmatically:
 ```python
 from hatch_calvar_sample import __version__
 
-print(__version__)  # Output: 2024.01.18.1
+print(__version__)  # Output: 2025.01.18.1
 ```
-
-## Development
-
-### Setting Up Development Environment
-
-```bash
-# Clone the repository
-git clone https://github.com/QAToolist/hatch-calvar-sample.git
-cd hatch-calvar-sample
-
-# Install in development mode
-pip install -e .
-
-# Install development dependencies
-pip install pytest
-```
-
-### Running Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run specific test file
-pytest tests/test_version_calc.py
-
-# Run with coverage
-pytest --cov=hatch_calvar_sample --cov=scripts
-```
-
-### Local Testing
-
-1. **Test version calculation:**
-   ```bash
-   python scripts/calc_version.py
-   ```
-
-2. **Test build process:**
-   ```bash
-   # Create VERSION file manually
-   echo "2024.01.18.1" > src/hatch_calvar_sample/VERSION
-
-   # Build package
-   hatch build
-
-   # Check built package
-   twine check dist/*
-   ```
-
-3. **Test installation:**
-   ```bash
-   pip install -e .
-   python -c "import hatch_calvar_sample; print(hatch_calvar_sample.__version__)"
-   ```
 
 ## Version Calculation Logic
 
-The version calculation script:
+The core logic lives in `src/hatch_calvar_sample/calver.py`:
 
-1. Gets current UTC date → `YYYY.MM.DD`
-2. Fetches all git tags (`git fetch --tags`)
-3. Parses tags matching CalVer pattern (`YYYY.MM.DD.MICRO` or `vYYYY.MM.DD.MICRO`)
+1. Gets current UTC date (using `datetime.now(timezone.utc)`)
+2. Fetches all git tags
+3. Parses tags matching the strict CalVer regex (`YYYY.MM.DD.MICRO` with validated month/day ranges)
 4. Filters tags with the same date
-5. Extracts MICRO numbers
-6. Calculates next MICRO = `max(existing) + 1` or `1` if none exist
-7. Returns: `YYYY.MM.DD.MICRO`
+5. Calculates next MICRO = `max(existing) + 1` or `1` if none exist
+6. Returns: `YYYY.MM.DD.MICRO`
 
 ### Edge Cases Handled
 
-- No tags → Returns `YYYY.MM.DD.1`
-- Multiple tags same date → Increments MICRO correctly
-- Date boundary crossing → Resets MICRO to 1 for new date
-- Invalid tag formats → Skipped gracefully
-- Timezone handling → Uses UTC for consistency
+- No tags -- returns `YYYY.MM.DD.1`
+- Multiple tags same date -- increments MICRO correctly
+- Date boundary crossing -- resets MICRO to 1 for new date
+- Invalid tag formats -- skipped gracefully
+- Timezone handling -- uses UTC for consistency
+
+## How to Adapt This Template
+
+This repository is designed as a starting point. Here is what to change when using it for your own project.
+
+### What to Rename
+
+1. **Package name:** Replace `hatch-calvar-sample` and `hatch_calvar_sample` everywhere:
+   - `pyproject.toml` -- `[project] name`, `[tool.hatch.version] path`, source paths
+   - `src/hatch_calvar_sample/` -- rename the directory
+   - `tests/` -- update imports
+   - `Makefile` -- update `SRC_DIR`
+2. **CLI entry point:** In `pyproject.toml` under `[project.scripts]`, rename `calver-check` to your desired command name.
+3. **Author/URL info:** Update `[project] authors` and `[project.urls]` in `pyproject.toml`.
+
+### What to Delete
+
+- `docs/PLANNING.md` -- project-specific planning notes
+- `SUGGESTIONS.md` -- internal notes (if present)
+- `docs/CALVER_MIGRATION_GUIDE.md` -- only needed if migrating from SemVer
+- Sample test data specific to this demo
+
+### What to Configure
+
+- **Python version range:** Adjust `requires-python` and classifier list in `pyproject.toml`.
+- **Coverage threshold:** Change `fail_under` in `[tool.coverage.report]` (currently 80%).
+- **Linting rules:** Adjust `[tool.ruff]` select/ignore lists as needed.
+- **Pre-commit hooks:** Review `.pre-commit-config.yaml` and enable/disable hooks.
+- **PyPI Trusted Publishing:** Configure your PyPI project to trust your GitHub repository.
+
+### First Release Checklist
+
+1. Rename the package (see above).
+2. Replace this README content with your own.
+3. Clear `CHANGELOG.md` entries (keep the format).
+4. Push to GitHub and configure PyPI Trusted Publishing.
+5. Open and merge your first PR -- the release will happen automatically.
+
+## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full development setup and guidelines.
+
+Quick start:
+
+```bash
+git clone https://github.com/QAToolist/hatch-calvar-sample.git
+cd hatch-calvar-sample
+pip install -e ".[dev]"
+pre-commit install
+make test
+```
+
+## Documentation
+
+Detailed guides are in the `docs/` directory:
+
+- [CalVer Quick Start](docs/CALVER_QUICK_START.md) -- get started with CalVer in minutes
+- [CalVer Migration Guide](docs/CALVER_MIGRATION_GUIDE.md) -- migrate an existing project from SemVer
+- [pyproject.toml Migration](docs/PYPROJECT_TOML_MIGRATION.md) -- reference for pyproject.toml settings
 
 ## PEP 440 Compliance
 
-CalVer format `YYYY.MM.DD.MICRO` is PEP 440 compliant as a release segment. The format:
-
-- Uses numeric components
-- Follows semantic ordering (newer dates > older dates)
-- Valid for PyPI distribution
-
-Validate PEP 440 compliance:
+CalVer format `YYYY.MM.DD.MICRO` is PEP 440 compliant as a release segment:
 
 ```bash
-calver-check validate 2024.01.18.1
-python scripts/calc_version.py --pep440
+calver-check validate 2025.01.18.1
 ```
 
 ## Troubleshooting
 
 ### Version Not Found
-
-If `__version__` is not available:
 
 1. Ensure package is installed: `pip install -e .`
 2. Check VERSION file exists: `ls src/hatch_calvar_sample/VERSION`
@@ -343,27 +339,15 @@ If `__version__` is not available:
 
 ### Build Errors
 
-If build fails:
-
 1. Verify VERSION file exists with valid format
 2. Check `pyproject.toml` dynamic version configuration
 3. Ensure hatch is installed: `pip install hatchling`
 
 ### CLI Not Found
 
-If `calver-check` command is not available:
-
 1. Reinstall package: `pip install -e .`
 2. Check entry point in `pyproject.toml`
 3. Verify PATH includes Python scripts directory
-
-## Contributing
-
-This is a sample project for demonstration purposes. If you find it useful or want to adapt it for your project:
-
-1. Review the implementation details in scripts and source code
-2. Check the GitHub Actions workflow for CI/CD patterns
-3. Adapt the configuration for your project structure
 
 ## License
 
@@ -373,8 +357,6 @@ This is a sample project for demonstration purposes. If you find it useful or wa
 
 - [Hatch Documentation](https://hatch.pypa.io/)
 - [Calendar Versioning (CalVer)](https://calver.org/)
-- [PEP 440 - Version Identification](https://peps.python.org/pep-0440/)
+- [PEP 440 -- Version Identification](https://peps.python.org/pep-0440/)
+- [PEP 561 -- Distributing and Packaging Type Information](https://peps.python.org/pep-0561/)
 - [GitHub Actions](https://docs.github.com/en/actions)
-
-
-## Demo Change

@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(open:*)",
+      "Bash(git rm:*)",
+      "Bash(pip install:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(printf:*)",
+      "Bash(python:*)",
+      "Bash(pip uninstall:*)",
+      "Bash(find:*)",
+      "Bash(# test_integration.py works with the same import. Something is very specific to this file. # Let me check if there''s a stale compiled version somewhere find / -name \"\"test_version_calc*\"\" -path \"\"*/site-packages/*\"\" echo \"\"===\"\" # Or maybe the file has a BOM or encoding issue file /Users/qatoolist/dev/hatch-calvar-sample/tests/test_version_calc.py echo \"\"===\"\" xxd /Users/qatoolist/dev/hatch-calvar-sample/tests/test_version_calc.py)",
+      "Bash(# OK! A new file works! The issue is SPECIFICALLY with the file named test_version_calc.py. # Could it be a stale .pyc from the old version \\(before our edits\\)? find /Users/qatoolist/dev/hatch-calvar-sample -name \"\"*test_version_calc*\"\" echo \"\"===\"\" # Delete any pycache containing old bytecode rm -rf /Users/qatoolist/dev/hatch-calvar-sample/tests/__pycache__ # Also check pytest cache rm -rf /Users/qatoolist/dev/hatch-calvar-sample/.pytest_cache # Try again python -m pytest tests/test_version_calc.py -v 2>&1)",
+      "Bash(pip show:*)",
+      "Bash(python3:*)",
+      "Bash(git config:*)",
+      "Bash(git -C /Users/qatoolist/dev/hatch-calvar-sample tag --list 'v*' --sort=-version:refname)",
+      "Bash(git -C /Users/qatoolist/dev/hatch-calvar-sample tag -l 'v*' --sort=-version:refname)",
+      "Bash(git -C /Users/qatoolist/dev/hatch-calvar-sample show HEAD:.github/workflows/docs-check.yml)",
+      "Bash(git -C /Users/qatoolist/dev/hatch-calvar-sample checkout:*)",
+      "Bash(pre-commit run:*)",
+      "Bash(isort --diff tests/test_calver_logic.py)",
+      "Bash(gh api:*)"
+    ]
+  }
+}

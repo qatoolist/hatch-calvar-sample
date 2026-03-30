@@ -5,7 +5,6 @@ on:
     types: [closed]
     branches:
       - main
-      - master
 
 jobs:
   create-tag:
@@ -18,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
           persist-credentials: true
@@ -29,13 +28,12 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Fetch all tags
-        run: |
-          git fetch --tags --force
+        run: git fetch --tags --force
 
       - name: Calculate next CalVer version
         id: version
@@ -61,13 +59,20 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create and push tag
+      - name: Write version to VERSION file
+        if: steps.tag_check.outputs.exists == 'false'
+        run: |
+          python scripts/calc_version.py --validate --pep440 --set
+
+      - name: Commit version, tag, and push
         if: steps.tag_check.outputs.exists == 'false'
         run: |
           TAG_NAME="v${{ steps.version.outputs.version }}"
           VERSION="${{ steps.version.outputs.version }}"
 
+          git add src/hatch_calvar_sample/VERSION
+          git commit -m "chore: set version to $VERSION [skip ci]"
           git tag -a "$TAG_NAME" -m "Release $VERSION (auto-created from PR #${{ github.event.pull_request.number }})"
-          git push origin "$TAG_NAME"
+          git push origin HEAD:main "$TAG_NAME"
 
-          echo "Created and pushed tag: $TAG_NAME"
+          echo "Committed version $VERSION, created and pushed tag: $TAG_NAME"
