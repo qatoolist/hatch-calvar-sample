@@ -187,8 +187,8 @@ jobs:
       - name: Run Bandit security scan
         shell: bash
         run: |
-          bandit -r src/ -f sarif -o bandit-results.sarif || true
-          bandit -r src/ -ll || echo "Bandit scan completed"
+          bandit -r src/ -c pyproject.toml -f sarif -o bandit-results.sarif || true
+          bandit -r src/ -c pyproject.toml -ll || echo "Bandit scan completed"
         continue-on-error: true
 
       - name: Upload Bandit SARIF to GitHub Security
